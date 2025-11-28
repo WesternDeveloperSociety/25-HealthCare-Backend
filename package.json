@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/WesternDeveloperSociety/25-HealthCare-Backend#readme",
   "dependencies": {
+    "dotenv": "^17.2.3",
     "express": "^5.1.0"
   },
   "devDependencies": {

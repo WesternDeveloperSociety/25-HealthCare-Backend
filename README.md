@@ -4,19 +4,19 @@ below are common sections that you may like to populate or leave empty to popula
 
 ## Purpose
 
-*what and who is this project for?*
+_what and who is this project for?_
 
 ## Contribution
 
-*add instructions on how to contribute to this repository, below is an example*
+_add instructions on how to contribute to this repository, below is an example_
 
 1. Create a branch off of `dev` branch named in the format `<name>/type-title-of-this-branch`.
-    - valid types include:
-        - feat: feature
-        - fix: bug fix
-        - refact: refactor
-        - docs: documentation
-        - chore: a chore
+   - valid types include:
+     - feat: feature
+     - fix: bug fix
+     - refact: refactor
+     - docs: documentation
+     - chore: a chore
 
 2. Once development is concluded, open a pull request from your branch back to the `dev` branch.
 
@@ -28,7 +28,7 @@ below are common sections that you may like to populate or leave empty to popula
 
 ## Development
 
-*add instructions on how to start the dev environment, below is an example*
+_add instructions on how to start the dev environment, below is an example_
 
 1. Install dependencies
 
@@ -44,7 +44,7 @@ npm run dev
 
 ## Deployment
 
-*add instructions on how to deploy this project (in applicable), below is an example*
+_add instructions on how to deploy this project (in applicable), below is an example_
 
 1. Ensure `NODE_ENV=production`
 
@@ -66,14 +66,15 @@ npm run start
 
 ## Contributors
 
-*give yourself some credit*
+_give yourself some credit_
 
 Team Leads:
+
 - Bob
 - His friends
 
 Developers:
+
 - Robert
 - John
 - A few more friends
-

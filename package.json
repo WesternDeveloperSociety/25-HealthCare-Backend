@@ -5,10 +5,14 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "npm run test",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "start": "node dist/index.js",
     "dev": "nodemon --exec tsx src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "format": "prettier --write \"**/*.{ts,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md}\""
   },
   "repository": {
     "type": "git",
@@ -27,9 +31,12 @@
   "devDependencies": {
     "@types/express": "^5.0.4",
     "@types/node": "^24.9.1",
+    "@vitest/coverage-v8": "^4.0.14",
     "nodemon": "^3.1.10",
+    "prettier": "^3.7.3",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.14"
   }
 }

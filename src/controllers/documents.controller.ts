@@ -1,15 +1,15 @@
-import type { Request, Response } from "express";
+import type { Request, Response } from 'express';
 
 let documents: any[] = [
   {
-    id: "1",
-    appointmentID: "1",
-    fileURL: "https://storage.example.com/doc-123.pdf",
-    title: "Lab Results",
-    docType: "lab-result",
-    uploadedAttachment: "results.pdf",
-    uploadedAt: "2025-11-20T15:30:00Z",
-  }
+    id: '1',
+    appointmentID: '1',
+    fileURL: 'https://storage.example.com/doc-123.pdf',
+    title: 'Lab Results',
+    docType: 'lab-result',
+    uploadedAttachment: 'results.pdf',
+    uploadedAt: '2025-11-20T15:30:00Z',
+  },
 ];
 
 /**
@@ -32,7 +32,7 @@ export const getDocumentById = async (req: Request, res: Response) => {
   const document = documents.find((d) => d.id === id);
 
   if (!document) {
-    return res.status(404).json({ message: "Document not found" });
+    return res.status(404).json({ message: 'Document not found' });
   }
 
   res.json(document);
@@ -45,7 +45,7 @@ export const getDocumentById = async (req: Request, res: Response) => {
 export const uploadDocument = async (req: Request, res: Response) => {
   // TODO: connect to Postgres + schema
   // TODO: Integrate file upload
-  
+
   const newDocument = {
     id: Date.now().toString(),
     appointmentID: req.body.appointmentID,
@@ -54,7 +54,7 @@ export const uploadDocument = async (req: Request, res: Response) => {
     docType: req.body.docType,
     uploadedAttachment: req.body.uploadedAttachment,
     uploadedAt: new Date().toISOString(),
-    ...req.body // Allow other fields
+    ...req.body, // Allow other fields
   };
 
   documents.push(newDocument);
@@ -69,14 +69,14 @@ export const scanDocument = async (req: Request, res: Response) => {
   // TODO: connect to Postgres + schema
   // TODO: Integrate OCR/image recognition
   res.status(201).json({
-    documentID: "temp-id-123",
+    documentID: 'temp-id-123',
     extractedData: {
-      documentType: "prescription",
-      date: "2025-11-15",
-      medications: ["Lisinopril 10mg"],
-      doctorName: "Dr. Smith",
+      documentType: 'prescription',
+      date: '2025-11-15',
+      medications: ['Lisinopril 10mg'],
+      doctorName: 'Dr. Smith',
     },
-    tags: ["prescription", "cardiology"],
-    message: "Document scanned successfully",
+    tags: ['prescription', 'cardiology'],
+    message: 'Document scanned successfully',
   });
 };

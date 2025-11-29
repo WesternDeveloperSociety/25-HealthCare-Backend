@@ -37,6 +37,7 @@ cp .env.example .env
 ```
 
 The `.env` file contains:
+
 - `DATABASE_URL` - PostgreSQL connection string
 - `PORT` - Server port (default: 3000)
 - `NODE_ENV` - Environment (development/production)
@@ -50,6 +51,7 @@ npm run docker:up
 ```
 
 This will:
+
 - Pull the PostgreSQL 16 image (if not already downloaded)
 - Start a container named `healthcare-postgres`
 - Create a persistent volume for data
@@ -190,11 +192,13 @@ The API is organized by resource:
 ## Development Workflow
 
 1. **Start the database** (if not already running):
+
    ```bash
    npm run docker:up
    ```
 
 2. **Start the development server**:
+
    ```bash
    npm run dev
    ```
@@ -202,6 +206,7 @@ The API is organized by resource:
 3. **Make changes** to your code
 
 4. **Test your changes**:
+
    ```bash
    npm test
    ```
@@ -218,6 +223,7 @@ The API is organized by resource:
 Create branches off of `dev` using the format: `<name>/type-title-of-this-branch`
 
 Valid types:
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `refact`: Refactor
@@ -245,11 +251,13 @@ Valid types:
 If you can't connect to the database:
 
 1. **Check if the container is running**:
+
    ```bash
    docker-compose ps
    ```
 
 2. **View database logs**:
+
    ```bash
    npm run docker:logs
    ```
@@ -274,11 +282,11 @@ If port 3000 is already in use, change the `PORT` in your `.env` file.
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | Required |
-| `PORT` | Server port | 3000 |
-| `NODE_ENV` | Environment (development/production) | development |
+| Variable       | Description                          | Default     |
+| -------------- | ------------------------------------ | ----------- |
+| `DATABASE_URL` | PostgreSQL connection string         | Required    |
+| `PORT`         | Server port                          | 3000        |
+| `NODE_ENV`     | Environment (development/production) | development |
 
 ## License
 

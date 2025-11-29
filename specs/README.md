@@ -2,6 +2,6 @@
 
 ## Summary
 
-*summary of project description*
+_summary of project description_
 
 ## Details

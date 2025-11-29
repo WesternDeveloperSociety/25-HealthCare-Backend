@@ -1,14 +1,14 @@
-import type { Request, Response } from "express";
+import type { Request, Response } from 'express';
 
 let users: any[] = [
   {
-    id: "1",
-    clerkID: "clerk_123",
-    firstName: "John",
-    lastName: "Doe",
-    email: "john@example.com",
-    role: "patient",
-  }
+    id: '1',
+    clerkID: 'clerk_123',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john@example.com',
+    role: 'patient',
+  },
 ];
 
 /**
@@ -31,7 +31,7 @@ export const getUserById = async (req: Request, res: Response) => {
   const user = users.find((u) => u.id === id);
 
   if (!user) {
-    return res.status(404).json({ message: "User not found" });
+    return res.status(404).json({ message: 'User not found' });
   }
 
   res.json(user);
@@ -43,7 +43,7 @@ export const getUserById = async (req: Request, res: Response) => {
  */
 export const createUser = async (req: Request, res: Response) => {
   // TODO: connect to Postgres + schema
-  
+
   const newUser = {
     id: Date.now().toString(),
     clerkID: req.body.clerkID,
@@ -51,7 +51,7 @@ export const createUser = async (req: Request, res: Response) => {
     firstName: req.body.firstName,
     lastName: req.body.lastName,
     email: req.body.email,
-    ...req.body
+    ...req.body,
   };
 
   users.push(newUser);

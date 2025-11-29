@@ -51,6 +51,7 @@
     "node_modules",
     "dist",
     "vitest.config.ts",
+    "prisma.config.ts",
     "**/*.test.ts",
     "**/*.spec.ts"
   ]

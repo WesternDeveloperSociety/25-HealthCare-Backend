@@ -1,0 +1,26 @@
+# Dependencies
+node_modules
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist
+build
+*.js.map
+
+# Generated files
+*.log
+*.lock
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+
+# Config files that shouldn't be formatted
+*.min.js
+*.min.css
+

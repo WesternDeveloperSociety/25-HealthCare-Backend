@@ -1,12 +1,10 @@
 import 'dotenv/config';
-import express from "express";
-import cors from "cors";
-import { PrismaClient } from "@prisma/client";
+import express from 'express';
+import cors from 'cors';
+import { PrismaClient } from '@prisma/client';
 import usersRouter from './routes/users.routes.js';
 import appointmentsRouter from './routes/appointments.routes.js';
 import documentsRouter from './routes/documents.routes.js';
- 
-
 
 const app = express();
 const prisma = new PrismaClient();
@@ -15,7 +13,6 @@ const port = process.env.PORT || 3005;
 // Middleware
 app.use(cors());
 app.use(express.json());
-
 
 // Routes
 app.use('/api/users', usersRouter);
@@ -29,4 +26,3 @@ app.listen(port, () => {
 app.get('/', (req, res) => {
   res.send('Hello World');
 });
-

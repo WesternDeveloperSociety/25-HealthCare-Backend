@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
-import type { User } from "@prisma/client";
-import { prisma } from "../lib/prisma.js";
+import type { User } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 
 let users: any[] = [
   {
@@ -13,13 +13,11 @@ let users: any[] = [
   },
 ];
 
-
 // interface SyncUserBody {
 //   clerkId: string;
 //   email?: string;
 //   name?: string;
 // }
-
 
 /**
  * GET /api/users
@@ -55,10 +53,10 @@ export const createUser = async (req: Request, res: Response) => {
   // TODO: connect to Postgres + schema
   try {
     const { clerkId, email, name } = req.body;
-    console.log("Syncing user:", { clerkId, email, name });
+    console.log('Syncing user:', { clerkId, email, name });
 
     if (!clerkId) {
-      return res.status(400).json({ error: "Missing clerkId" });
+      return res.status(400).json({ error: 'Missing clerkId' });
     }
 
     // Check if user exists
@@ -78,16 +76,11 @@ export const createUser = async (req: Request, res: Response) => {
     }
 
     return res.json({ user });
-
   } catch (err) {
-    console.error("Sync user error:", err);
-    return res.status(500).json({ error: "Server error" });
+    console.error('Sync user error:', err);
+    return res.status(500).json({ error: 'Server error' });
   }
-
 };
-
-
-
 
 // const newUser = {
 //     id: Date.now().toString(),

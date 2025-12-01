@@ -1,22 +1,95 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-generator client {
-  provider = "prisma-client-js"
-}
-
+// prisma/schema.prisma
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// Example model - update based on your requirements
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+generator client {
+  provider = "prisma-client-js"
+}
 
-  @@map("users")
+model User {
+  id         String    @id @default(cuid())
+  clerkId    String    @unique
+  email      String?
+  name       String?
+  role       Role      @default(USER)
+  createdAt  DateTime  @default(now())
+  profile    Profile?
+  visits     Visit[]
+  files      MedicalFile[]
+}
+
+model Profile {
+  id        String  @id @default(cuid())
+  user      User    @relation(fields: [userId], references: [id])
+  userId    String  @unique
+  phone     String?
+  specialty String?
+  bio       String?
+  createdAt DateTime @default(now())
+}
+
+model MedicalFile {
+  id           String   @id @default(cuid())
+  user         User     @relation(fields:[userId], references:[id])
+  userId       String
+  provider     String?
+  specialty    String?
+  fileKey      String
+  fileName     String
+  fileType     String
+  uploadedAt   DateTime @default(now())
+  extractedDoc Json?
+  tags         FileTag[]
+}
+
+model FileTag {
+  id         String      @id @default(cuid())
+  file       MedicalFile @relation(fields: [fileId], references: [id])
+  fileId     String
+  tag        String
+}
+
+model Visit {
+  id             String    @id @default(cuid())
+  user           User      @relation(fields:[userId], references:[id])
+  userId         String
+  provider       String?
+  visitDate      DateTime
+  summary        String?
+  highlights     String?
+  createdAt      DateTime  @default(now())
+  labResults     LabResult[]
+}
+
+model LabResult {
+  id        String  @id @default(cuid())
+  visit     Visit   @relation(fields: [visitId], references: [id])
+  visitId   String
+  testName  String
+  value     String
+  unit      String?
+  refRange  String?
+  flag      ResultFlag @default(NORMAL)
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  fromUserId  String
+  toUserId    String
+  body        String
+  createdAt   DateTime @default(now())
+  threadId    String?
+}
+
+enum Role {
+  USER
+  DOCTOR
+}
+
+enum ResultFlag {
+  LOW
+  NORMAL
+  HIGH
 }

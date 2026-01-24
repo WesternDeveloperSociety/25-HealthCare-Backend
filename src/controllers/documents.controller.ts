@@ -1,4 +1,6 @@
 import type { Request, Response } from 'express';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
 let documents: any[] = [
   {
@@ -43,8 +45,19 @@ export const getDocumentById = async (req: Request, res: Response) => {
  * Upload new document (PDF, JPG, PNG, etc.)
  */
 export const uploadDocument = async (req: Request, res: Response) => {
+  if (!req.file) {
+    return res.status(400).json({ message: 'No file uploaded' });
+  }
   // TODO: connect to Postgres + schema
   // TODO: Integrate file upload
+
+  // generates a unique filename for storage
+  const ext = path.extname(req.file.originalname);
+  const uniqueFilename = `${uuidv4()}${ext}`; // uuidv4 generate unique identifier
+
+  // Stub: Upload to S3/R2 (replace this with actual SDK logic)
+  // For now, just simulate a URL
+  const fileURL = `https://storage.example.com/${uniqueFilename}`;
 
   const newDocument = {
     id: Date.now().toString(),

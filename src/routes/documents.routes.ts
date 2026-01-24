@@ -15,7 +15,11 @@ const upload = multer({ dest: 'uploads/' }); // temp local storage
 
 router.get('/', getAllDocuments);
 router.get('/:id', getDocumentById);
-router.post('/documents', upload.single('file'), documentsController.uploadDocument);
+router.post(
+  '/documents',
+  upload.single('file'),
+  documentsController.uploadDocument
+);
 router.post('/scan', scanDocument);
 
 export default router;

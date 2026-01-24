@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import * as documentsController from '../controllers/documents.controller';
+import * as documentsController from '../controllers/documents.controller.js';
 import {
   getAllDocuments,
   getDocumentById,
@@ -16,7 +16,7 @@ const upload = multer({ dest: 'uploads/' }); // temp local storage
 router.get('/', getAllDocuments);
 router.get('/:id', getDocumentById);
 router.post(
-  '/documents',
+  '/',
   upload.single('file'),
   documentsController.uploadDocument
 );

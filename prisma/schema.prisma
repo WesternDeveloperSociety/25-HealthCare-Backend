@@ -7,55 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-// ============================================
-// USER & AUTHENTICATION (Using Clerk)
-// ============================================
-
-model User {
-  id      String   @id @default(uuid())
-  clerkId String   @unique // Clerk user ID
-  email   String   @unique
-  role    UserRole @default(PATIENT)
-
-  firstName    String
-  lastName     String
-  dateOfBirth  DateTime?
-  gender       Gender?
-  phoneNumber  String?
-  profileImage String?
-
-  // Doctor-specific fields (only for role = DOCTOR)
-  specialty     MedicalSpecialty?
-  npi           String?           @unique // National Provider Identifier
-  licenseNumber String?
-
-  // Preferences
-  notificationsEnabled Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations - as patient
-  documents          MedicalDocument[]   @relation("PatientDocuments")
-  visits             Visit[]             @relation("PatientVisits")
-  medications        Medication[]        @relation("PatientMedications")
-  labResults         LabResult[]
-  healthInsights     HealthInsight[]
-  screeningReminders ScreeningReminder[]
-  sentMessages       Message[]           @relation("SentMessages")
-  receivedMessages   Message[]           @relation("ReceivedMessages")
-
-  // Relations - as doctor
-  providedDocuments MedicalDocument[] @relation("DoctorDocuments")
-  conductedVisits   Visit[]           @relation("DoctorVisits")
-  prescribedMeds    Medication[]      @relation("DoctorMedications")
-
-  @@index([clerkId])
-  @@index([role])
-  @@map("users")
 }
 
 enum UserRole {
@@ -69,6 +20,22 @@ enum Gender {
   FEMALE
   OTHER
   PREFER_NOT_TO_SAY
+}
+
+enum Province {
+  AB
+  BC
+  MB
+  NB
+  NL
+  NS
+  NT
+  NU
+  ON
+  PE
+  QC
+  SK
+  YT
 }
 
 enum MedicalSpecialty {
@@ -91,307 +58,73 @@ enum MedicalSpecialty {
   OTHER
 }
 
-// ============================================
-// MEDICAL DOCUMENTS & RECORDS
-// ============================================
+model User {
+  id      String   @id @default(uuid())
+  clerkId String   @unique
+  email   String   @unique
+  role    UserRole
 
-model MedicalDocument {
-  id     String @id @default(uuid())
-  userId String
-  user   User   @relation("PatientDocuments", fields: [userId], references: [id], onDelete: Cascade)
+  firstName    String
+  lastName     String
+  dateOfBirth  DateTime
+  gender       Gender
+  phoneNumber  String?
+  profileImage String?
 
-  title       String
-  description String?
-  fileUrl     String
-  fileType    FileType
-  fileSize    Int
+  notificationsEnabled Boolean @default(true)
 
-  // AI/OCR Processing
-  ocrText       String? @db.Text
-  ocrProcessed  Boolean @default(false)
-  ocrConfidence Float?
+  doctor  Doctor?
+  patient Patient?
 
-  // Categorization
-  category     DocumentCategory
-  specialty    MedicalSpecialty?
-  documentDate DateTime?
-  uploadDate   DateTime          @default(now())
-
-  // Provider (doctor who created/uploaded this)
-  providerId String?
-  provider   User?   @relation("DoctorDocuments", fields: [providerId], references: [id])
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  tags          DocumentTag[]
-  extractedData ExtractedMedicalData?
-
-  @@index([userId, category])
-  @@index([documentDate])
-  @@map("medical_documents")
+  @@index([clerkId])
+  @@index([role])
+  @@map("users")
 }
 
-enum FileType {
-  PDF
-  JPG
-  PNG
-  JPEG
-  HEIC
-}
-
-enum DocumentCategory {
-  MEDICAL_HISTORY
-  MEDICATIONS
-  LAB_RESULTS
-  IMAGING
-  PRESCRIPTIONS
-  REPORTS
-  INSURANCE
-  OTHER
-}
-
-model DocumentTag {
-  id         String          @id @default(uuid())
-  documentId String
-  document   MedicalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
-  tagName  String
-  tagValue String?
-
-  createdAt DateTime @default(now())
-
-  @@index([documentId])
-  @@map("document_tags")
-}
-
-model ExtractedMedicalData {
-  id         String          @id @default(uuid())
-  documentId String          @unique
-  document   MedicalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
-  extractedFields Json
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("extracted_medical_data")
-}
-
-// ============================================
-// VISITS & SUMMARIES
-// ============================================
-
-model Visit {
+model Doctor {
   id     String @id @default(uuid())
-  userId String
-  user   User   @relation("PatientVisits", fields: [userId], references: [id], onDelete: Cascade)
-
-  visitDate DateTime
-  visitType VisitType
-
-  // Doctor who conducted the visit
-  doctorId String?
-  doctor   User?   @relation("DoctorVisits", fields: [doctorId], references: [id])
-
-  chiefComplaint String?
-
-  // AI-generated summary
-  summaryGenerated Boolean  @default(false)
-  summary          String?  @db.Text
-  keyFindings      String[]
-
-  hasAbnormalFindings Boolean   @default(false)
-  followUpRequired    Boolean   @default(false)
-  followUpDate        DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  diagnoses Diagnosis[]
-  vitals    VitalSign?
-
-  @@index([userId, visitDate])
-  @@map("visits")
-}
-
-enum VisitType {
-  IN_PERSON
-  TELEMEDICINE
-  EMERGENCY
-  FOLLOW_UP
-  ROUTINE_CHECKUP
-  SPECIALIST
-}
-
-model Diagnosis {
-  id      String @id @default(uuid())
-  visitId String
-  visit   Visit  @relation(fields: [visitId], references: [id], onDelete: Cascade)
-
-  code  String
-  name  String
-  notes String?
-
-  createdAt DateTime @default(now())
-
-  @@index([visitId])
-  @@map("diagnoses")
-}
-
-model VitalSign {
-  id      String @id @default(uuid())
-  visitId String @unique
-  visit   Visit  @relation(fields: [visitId], references: [id], onDelete: Cascade)
-
-  bloodPressureSystolic  Int?
-  bloodPressureDiastolic Int?
-  heartRate              Int?
-  temperature            Float?
-  weight                 Float?
-  height                 Float?
-  oxygenSaturation       Int?
-
-  createdAt DateTime @default(now())
-
-  @@map("vital_signs")
-}
-
-// ============================================
-// HEALTH ANALYTICS & TRACKING
-// ============================================
-
-model LabResult {
-  id     String @id @default(uuid())
-  userId String
+  userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  testName     String
-  testCode     String?
-  resultValue  String
-  resultUnit   String?
-  referenceMin Float?
-  referenceMax Float?
-
-  isAbnormal Boolean  @default(false)
-  flags      String[]
-
-  testDate DateTime
-  labName  String?
+  specialty      MedicalSpecialty
+  licenseNumber  String
+  province       Province
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([userId, testDate])
-  @@index([testName])
-  @@map("lab_results")
+  @@unique([licenseNumber, province])
+  @@map("doctors")
 }
 
-model Medication {
+model Patient {
   id     String @id @default(uuid())
-  userId String
-  user   User   @relation("PatientMedications", fields: [userId], references: [id], onDelete: Cascade)
-
-  name        String
-  genericName String?
-  dosage      String
-  frequency   String
-  route       String?
-
-  startDate DateTime
-  endDate   DateTime?
-  isActive  Boolean   @default(true)
-
-  // Prescribed by doctor
-  prescribedById String?
-  prescribedBy   User?   @relation("DoctorMedications", fields: [prescribedById], references: [id])
-
-  refillsRemaining Int?
-  nextRefillDate   DateTime?
-
-  notes String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId, isActive])
-  @@map("medications")
-}
-
-model HealthInsight {
-  id     String @id @default(uuid())
-  userId String
+  userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  type     InsightType
-  title    String
-  message  String          @db.Text
-  severity InsightSeverity
-
-  relatedDataType String?
-  relatedDataId   String?
-
-  isRead      Boolean @default(false)
-  isDismissed Boolean @default(false)
+  emergencyContactName  String?
+  emergencyContactPhone String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([userId, isRead])
-  @@map("health_insights")
+  @@map("patients")
 }
-
-enum InsightType {
-  ABNORMAL_RESULT
-  TREND_IMPROVEMENT
-  TREND_DECLINE
-  MEDICATION_REMINDER
-  SCREENING_DUE
-  FOLLOW_UP_NEEDED
-  GENERAL_TIP
-}
-
-enum InsightSeverity {
-  INFO
-  WARNING
-  URGENT
-  CRITICAL
-}
-
-model ScreeningReminder {
-  id     String @id @default(uuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  screeningType String
-  description   String?
-  dueDate       DateTime
-
-  isCompleted   Boolean   @default(false)
-  completedDate DateTime?
-
-  reminderSent Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId, dueDate])
-  @@map("screening_reminders")
-}
-
-// ============================================
-// COMMUNICATION
-// ============================================
 
 model Message {
   id String @id @default(uuid())
 
   senderId String
-  sender   User   @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 
   recipientId String
-  recipient   User   @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  recipient   User @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
 
   subject String
   body    String @db.Text
@@ -409,3 +142,4 @@ model Message {
   @@index([isRead])
   @@map("messages")
 }
+

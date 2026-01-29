@@ -1,95 +1,27 @@
 import type { Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
 import { UserRole } from '@prisma/client';
+import { getAuth } from '@clerk/express';
 
-interface AuthRequest extends Request {
-  clerkId?: string;
-}
-
-/**
- * GET /api/users
- * List all users (filtered by role)
- */
-export const getAllUsers = async (req: Request, res: Response) => {
-  try {
-    const { role, search } = req.query;
-
-    const where: any = {};
-
-    // Filter by role if provided
-    if (role && typeof role === 'string') {
-      where.role = role.toUpperCase() as UserRole;
-    }
-
-    // Search by name or email if provided
-    if (search && typeof search === 'string') {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    const users = await prisma.user.findMany({
-      where,
-      select: {
-        id: true,
-        clerkId: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        specialty: true,
-        profileImage: true,
-        phoneNumber: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    res.json(users);
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ error: 'Failed to fetch users' });
-  }
-};
 
 /**
  * GET /api/users/:id
- * Get specific user by ID
  */
 export const getUserById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    if (!id) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+    if (!id) return res.status(400).json({ error: 'User ID is required' });
 
     const user = await prisma.user.findUnique({
       where: { id },
-      select: {
-        id: true,
-        clerkId: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        specialty: true,
-        profileImage: true,
-        phoneNumber: true,
-        dateOfBirth: true,
-        gender: true,
-        npi: true,
-        licenseNumber: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        doctor: true,
+        patient: true,
       },
     });
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
     res.json(user);
   } catch (error) {
@@ -100,12 +32,11 @@ export const getUserById = async (req: Request, res: Response) => {
 
 /**
  * POST /api/users
- * Create or sync user from Clerk (called during sign-up or webhook)
+ * Create or sync user from Clerk
  */
 export const createUser = async (req: Request, res: Response) => {
   try {
     const {
-      clerkId,
       email,
       firstName,
       lastName,
@@ -114,27 +45,24 @@ export const createUser = async (req: Request, res: Response) => {
       dateOfBirth,
       gender,
       specialty,
-      npi,
       licenseNumber,
+      province,
       profileImage,
     } = req.body;
 
-    // Validate required fields
-    if (!clerkId || !email || !firstName || !lastName) {
-      return res.status(400).json({
-        error: 'Missing required fields: clerkId, email, firstName, lastName',
-      });
+    const { userId } = getAuth(req);
+
+    if (!userId || !email || !firstName || !lastName) {
+      return res.status(400).json({ error: 'Missing required fields or unauthenticated' });
     }
 
-    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { clerkId },
+      where: { clerkId: userId },
     });
 
     if (existingUser) {
-      // Update existing user
       const updatedUser = await prisma.user.update({
-        where: { clerkId },
+        where: { clerkId: userId },
         data: {
           email,
           firstName,
@@ -144,19 +72,28 @@ export const createUser = async (req: Request, res: Response) => {
           ...(role && { role: role as UserRole }),
           ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
           ...(gender && { gender }),
-          ...(specialty && { specialty }),
-          ...(npi && { npi }),
-          ...(licenseNumber && { licenseNumber }),
         },
       });
+
+      if (updatedUser.role === UserRole.DOCTOR) {
+        await prisma.doctor.upsert({
+          where: { userId: updatedUser.id },
+          update: { specialty, licenseNumber, province },
+          create: {
+            userId: updatedUser.id,
+            specialty,
+            licenseNumber,
+            province,
+          },
+        });
+      }
 
       return res.json(updatedUser);
     }
 
-    // Create new user
     const newUser = await prisma.user.create({
       data: {
-        clerkId,
+        clerkId: userId,
         email,
         firstName,
         lastName,
@@ -165,11 +102,27 @@ export const createUser = async (req: Request, res: Response) => {
         profileImage,
         ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
         ...(gender && { gender }),
-        ...(specialty && { specialty }),
-        ...(npi && { npi }),
-        ...(licenseNumber && { licenseNumber }),
       },
     });
+
+    if (newUser.role === UserRole.DOCTOR) {
+      await prisma.doctor.create({
+        data: {
+          userId: newUser.id,
+          specialty,
+          licenseNumber,
+          province,
+        },
+      });
+    }
+
+    if (newUser.role === UserRole.PATIENT) {
+      await prisma.patient.create({
+        data: {
+          userId: newUser.id,
+        },
+      });
+    }
 
     res.status(201).json(newUser);
   } catch (error) {
@@ -180,41 +133,21 @@ export const createUser = async (req: Request, res: Response) => {
 
 /**
  * GET /api/users/me
- * Get current authenticated user
  */
-export const getCurrentUser = async (req: AuthRequest, res: Response) => {
+export const getCurrentUser = async (req: Request, res: Response) => {
   try {
-    const clerkId = req.clerkId;
-
-    if (!clerkId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    const { userId } = getAuth(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const user = await prisma.user.findUnique({
-      where: { clerkId },
-      select: {
-        id: true,
-        clerkId: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        specialty: true,
-        profileImage: true,
-        phoneNumber: true,
-        dateOfBirth: true,
-        gender: true,
-        npi: true,
-        licenseNumber: true,
-        notificationsEnabled: true,
-        createdAt: true,
-        updatedAt: true,
+      where: { clerkId: userId },
+      include: {
+        doctor: true,
+        patient: true,
       },
     });
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
     res.json(user);
   } catch (error) {
@@ -225,15 +158,12 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
 
 /**
  * PATCH /api/users/me
- * Update current authenticated user
  */
-export const updateCurrentUser = async (req: AuthRequest, res: Response) => {
+export const updateCurrentUser = async (req: Request, res: Response) => {
   try {
-    const clerkId = req.clerkId;
+    const { userId } = getAuth(req);
 
-    if (!clerkId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const {
       firstName,
@@ -242,25 +172,33 @@ export const updateCurrentUser = async (req: AuthRequest, res: Response) => {
       dateOfBirth,
       gender,
       specialty,
-      npi,
       licenseNumber,
+      province,
       notificationsEnabled,
     } = req.body;
 
     const updatedUser = await prisma.user.update({
-      where: { clerkId },
+      where: { clerkId: userId },
       data: {
         ...(firstName && { firstName }),
         ...(lastName && { lastName }),
         ...(phoneNumber !== undefined && { phoneNumber }),
         ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
         ...(gender && { gender }),
-        ...(specialty && { specialty }),
-        ...(npi && { npi }),
-        ...(licenseNumber && { licenseNumber }),
         ...(notificationsEnabled !== undefined && { notificationsEnabled }),
       },
     });
+
+    if (specialty || licenseNumber || province) {
+      await prisma.doctor.update({
+        where: { userId: updatedUser.id },
+        data: {
+          ...(specialty && { specialty }),
+          ...(licenseNumber && { licenseNumber }),
+          ...(province && { province }),
+        },
+      });
+    }
 
     res.json(updatedUser);
   } catch (error) {

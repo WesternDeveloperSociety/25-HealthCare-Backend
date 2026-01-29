@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { getAllChats, getMessages, sendMessage } from '../controllers/chats.controller.js';
+import {
+  getAllChats,
+  getMessages,
+  sendMessage,
+} from '../controllers/chats.controller.js';
 
 const router = Router();
 

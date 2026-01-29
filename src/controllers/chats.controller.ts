@@ -31,7 +31,6 @@ let messages: Array<{
   },
 ];
 
-
 /**
  * GET /api/chats
  * List all chats (in-memory). Replace with DB queries later.
@@ -40,8 +39,6 @@ export const getAllChats = async (req: Request, res: Response) => {
   // TODO: add filtering, search, pagination
   res.json(messages);
 };
-
-
 
 /**
  * GET /api/chats/:recipientId
@@ -73,11 +70,15 @@ export const getMessages = async (req: Request, res: Response) => {
   }
 
   const convo = messages
-    .filter((m) =>
-      (m.senderId === currentUserId && m.recipientId === recipientId) ||
-      (m.senderId === recipientId && m.recipientId === currentUserId)
+    .filter(
+      (m) =>
+        (m.senderId === currentUserId && m.recipientId === recipientId) ||
+        (m.senderId === recipientId && m.recipientId === currentUserId)
     )
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
 
   res.json(convo);
 };
@@ -90,7 +91,8 @@ export const getMessages = async (req: Request, res: Response) => {
  */
 export const sendMessage = async (req: Request, res: Response) => {
   const { recipientId } = req.params;
-  const currentUserId = (req.header('x-user-id') as string) || (req.body.currentUserId as string);
+  const currentUserId =
+    (req.header('x-user-id') as string) || (req.body.currentUserId as string);
   const { text } = req.body;
 
   if (!recipientId) {

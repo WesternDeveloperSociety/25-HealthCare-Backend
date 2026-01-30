@@ -7,16 +7,139 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
-// Example model - update based on your requirements
+enum UserRole {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum Province {
+  AB
+  BC
+  MB
+  NB
+  NL
+  NS
+  NT
+  NU
+  ON
+  PE
+  QC
+  SK
+  YT
+}
+
+enum MedicalSpecialty {
+  FAMILY_MEDICINE
+  INTERNAL_MEDICINE
+  PEDIATRICS
+  CARDIOLOGY
+  DERMATOLOGY
+  ENDOCRINOLOGY
+  GASTROENTEROLOGY
+  NEUROLOGY
+  OBSTETRICS_GYNECOLOGY
+  ONCOLOGY
+  OPHTHALMOLOGY
+  ORTHOPEDICS
+  PSYCHIATRY
+  RADIOLOGY
+  SURGERY
+  UROLOGY
+  OTHER
+}
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
+  id      String   @id @default(uuid())
+  clerkId String   @unique
+  email   String   @unique
+  role    UserRole
+
+  firstName    String
+  lastName     String
+  dateOfBirth  DateTime
+  gender       Gender
+  phoneNumber  String?
+  profileImage String?
+
+  notificationsEnabled Boolean @default(true)
+
+  doctor  Doctor?
+  patient Patient?
+
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([clerkId])
+  @@index([role])
   @@map("users")
 }
+
+model Doctor {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  specialty      MedicalSpecialty
+  licenseNumber  String
+  province       Province
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([licenseNumber, province])
+  @@map("doctors")
+}
+
+model Patient {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  emergencyContactName  String?
+  emergencyContactPhone String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("patients")
+}
+
+model Message {
+  id String @id @default(uuid())
+
+  senderId String
+  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  recipientId String
+  recipient   User @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  subject String
+  body    String @db.Text
+
+  isRead Boolean   @default(false)
+  readAt DateTime?
+
+  attachments String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([isRead])
+  @@map("messages")
+}
+

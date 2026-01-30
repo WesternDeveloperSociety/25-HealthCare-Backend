@@ -3,7 +3,6 @@ import prisma from '../lib/prisma.js';
 import { UserRole } from '@prisma/client';
 import { getAuth } from '@clerk/express';
 
-
 /**
  * GET /api/users/:id
  */
@@ -53,7 +52,9 @@ export const createUser = async (req: Request, res: Response) => {
     const { userId } = getAuth(req);
 
     if (!userId || !email || !firstName || !lastName) {
-      return res.status(400).json({ error: 'Missing required fields or unauthenticated' });
+      return res
+        .status(400)
+        .json({ error: 'Missing required fields or unauthenticated' });
     }
 
     const existingUser = await prisma.user.findUnique({

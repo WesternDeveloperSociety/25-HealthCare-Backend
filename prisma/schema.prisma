@@ -1,5 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// ============================================
+// PRISMA SETUP
+// ============================================
 
 generator client {
   provider = "prisma-client-js"
@@ -8,6 +9,10 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// ============================================
+// ENUMS
+// ============================================
 
 enum UserRole {
   PATIENT
@@ -58,43 +63,58 @@ enum MedicalSpecialty {
   OTHER
 }
 
-model User {
-  id      String   @id @default(uuid())
-  clerkId String   @unique
-  email   String   @unique
-  role    UserRole
+enum MemberRole {
+  MEMBER
+  ADMIN
+}
 
-  firstName    String
-  lastName     String
-  dateOfBirth  DateTime
-  gender       Gender
-  phoneNumber  String?
-  profileImage String?
+// ============================================
+// CORE USER
+// ============================================
+
+model User {
+  id    String   @id // Stores the Clerk ID
+  email String   @unique
+  role  UserRole
+
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime
+  gender      Gender
+  phoneNumber String?
 
   notificationsEnabled Boolean @default(true)
 
   doctor  Doctor?
   patient Patient?
 
-  sentMessages     Message[] @relation("SentMessages")
-  receivedMessages Message[] @relation("ReceivedMessages")
+  sentMessages Message[] @relation("SentMessages")
+  readMessages Message[] @relation("ReadMessages")
+
+  memberships ConversationMember[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([clerkId])
+  ownedDocuments  Document[] @relation("OwnedDocuments")
+  sharedDocuments Document[] @relation("UserSharedDocuments")
+
   @@index([role])
   @@map("users")
 }
+
+// ============================================
+// DOCTOR / PATIENT
+// ============================================
 
 model Doctor {
   id     String @id @default(uuid())
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  specialty      MedicalSpecialty
-  licenseNumber  String
-  province       Province
+  specialty     MedicalSpecialty
+  licenseNumber String
+  province      Province
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -117,29 +137,89 @@ model Patient {
   @@map("patients")
 }
 
+// ============================================
+// CONVERSATIONS (1:1 + GROUP)
+// ============================================
+
+model Conversation {
+  id        String   @id @default(uuid())
+  isGroup   Boolean  @default(false)
+  title     String?
+  createdAt DateTime @default(now())
+
+  members  ConversationMember[]
+  messages Message[]
+
+  attachedDocuments Document[] @relation("ConversationDocuments")
+
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String     @id @default(uuid())
+  conversationId String
+  userId         String
+  role           MemberRole @default(MEMBER)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  joinedAt DateTime @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_members")
+}
+
+// ============================================
+// MESSAGES
+// ============================================
+
 model Message {
   id String @id @default(uuid())
 
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
   senderId String
-  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  sender   User   @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 
-  recipientId String
-  recipient   User @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
-
-  subject String
-  body    String @db.Text
+  body String @db.Text
 
   isRead Boolean   @default(false)
   readAt DateTime?
+  readBy User[]    @relation("ReadMessages")
 
-  attachments String[]
+  attachments String[] // links to a bucket
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([conversationId])
   @@index([senderId])
-  @@index([recipientId])
-  @@index([isRead])
   @@map("messages")
 }
 
+// ============================================
+// DOCUMENTS
+// ============================================
+
+model Document {
+  id          String  @id @default(uuid())
+  title       String // Can default to filename if not provided
+  key         String // GCS path
+  mimeType    String
+  size        Int
+  description String?
+
+  ownerId String
+  owner   User   @relation("OwnedDocuments", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  sharedWithUsers         User[]         @relation("UserSharedDocuments")
+  sharedWithConversations Conversation[] @relation("ConversationDocuments")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("documents")
+}

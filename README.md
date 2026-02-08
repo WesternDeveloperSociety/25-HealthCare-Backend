@@ -79,7 +79,13 @@ Generate the Prisma Client (usually done automatically, but can be run manually)
 npm run db:generate
 ```
 
-### 6. Start the Development Server
+### 6. Generate Storage Emulator (GCS Storage Emulator)
+
+```bash
+npm run storage:up
+```
+
+### 7. Start the Development Server
 
 ```bash
 npm run dev
@@ -104,6 +110,12 @@ The server will start on `http://localhost:3000` (or the port specified in `.env
 - `npm run db:studio` - Open Prisma Studio (database GUI)
 - `npm run db:seed` - Run database seed script
 
+### Storage
+
+- `npm run storage:up` - Start Google Cloud Storage emulator
+- `npm run storage:down` - Stop Google Cloud Storage emulator
+- `npm run storage:logs` - View Google Cloud Storage emulator logs
+
 ### Docker
 
 - `npm run docker:up` - Start PostgreSQL container
@@ -121,22 +133,29 @@ The server will start on `http://localhost:3000` (or the port specified in `.env
 - `npm run format` - Format all code with Prettier
 - `npm run format:check` - Check code formatting without changes
 
-## Project Structure
-
 ```
 backend/
+├── .github/                  # GitHub Actions workflows
 ├── src/
-│   ├── controllers/     # Request handlers
-│   ├── routes/          # API route definitions
-│   ├── lib/             # Shared utilities
-│   │   └── prisma.ts    # Prisma client instance
-│   └── index.ts         # Application entry point
+│   ├──__tests__/             # Unit and integration tests
+│   ├── controllers/          # Request handlers
+│   ├── routes/               # API route definitions
+│   ├── lib/                  # Shared utilities
+│   │   └── prisma.ts         # Prisma client instance
+│   │   └── storage.ts        # Storage client instance
+│   │   └── env.ts            # Environment variables checker
+│   ├── middleware/           # API route definitions
+│   │   └── auth.ts           # Authentication middleware
+│   │   └── errorHandler.ts   # Error handling middleware
+│   ├── utils/                # Utils
+│   │   └── AppError.ts       # Centralize error definitions
+│   └── index.ts              # Application entry point
 ├── prisma/
-│   └── schema.prisma    # Database schema
-├── docker-compose.yml   # PostgreSQL container configuration
-├── .env                 # Environment variables (gitignored)
-├── .env.example         # Environment variables template
-└── package.json         # Dependencies and scripts
+│   └── schema.prisma         # Database schema
+├── docker-compose.yml        # PostgreSQL container configuration
+├── .env                      # Environment variables (gitignored)
+├── .env.example              # Environment variables template
+└── package.json              # Dependencies and scripts
 ```
 
 ## Database Management

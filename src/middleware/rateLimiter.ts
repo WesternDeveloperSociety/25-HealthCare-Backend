@@ -15,14 +15,16 @@ export const clerkAwareLimiter = rateLimit({
       return `user:${auth.userId}`;
     }
     // Fallback to IP-based limiting for M2M or unauthenticated requests
-    return `ip:${req.ip}`;
+    return `ip:${req.ip ?? 'unknown'}`;
   },
+  validate: { xForwardedForHeader: false }
 });
 
 export const globalIpLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 2000, // loose
-  keyGenerator: (req) => `ip:${req.ip}`,
+  keyGenerator: (req) => `ip:${req.ip ?? 'unknown'}`,
   standardHeaders: true, // adds RateLimit-* headers
   legacyHeaders: false, // disables X-RateLimit-* headers
+  validate: { xForwardedForHeader: false }
 });

@@ -3,6 +3,7 @@ import { Router } from 'express';
 import {
   addMemberToConversation,
   createConverstation,
+  getConversations,
   leaveConverstation,
   removeMemberFromConversation,
   subscribeToConversation,
@@ -24,6 +25,8 @@ router.use(requireAuthentication);
 
 /* CONVERSATION BASED */
 // Conversation Management
+router.get('/', getConversations);
+
 router.get(
   '/subscribe/:conversationId',
   validate(SubscribeToConversationSchema.shape),

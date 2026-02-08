@@ -11,7 +11,7 @@ import { startupChecks } from '@/lib/env';
 import { generateOpenAPI } from '@/lib/openapi';
 import { errorHandler } from '@/middleware/errorHandler';
 import { noCache } from '@/middleware/noCache';
-import { clerkAwareLimiter, globalIpLimiter } from '@/middleware/rateLimiter';
+// import { clerkAwareLimiter, globalIpLimiter } from '@/middleware/rateLimiter';
 import conversationsRouter from '@/routes/conversations.routes';
 // import documentsRouter from '@/routes/documents.routes';
 import messagesRouter from '@/routes/messages.routes';
@@ -19,7 +19,7 @@ import uploadRouter from '@/routes/upload.routes';
 import usersRouter from '@/routes/users.routes';
 
 // Checks if All Environment Variables Exist
-await startupChecks();
+// await startupChecks();
 
 /* Basic Setup Boilerplate */
 const app = express();
@@ -38,13 +38,6 @@ app.get('/api/openapi.json', (req, res) => {
   res.json(generateOpenAPI());
 });
 
-// Routes
-app.use('/api/users', usersRouter);
-app.use('/api/messages', messagesRouter);
-app.use('/api/conversations', conversationsRouter);
-app.use('/api/upload', uploadRouter);
-// app.use('/api/documents', documentsRouter);
-
 /* SECURITY */
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '10mb' })); // limit for JSON bodies
@@ -52,16 +45,23 @@ app.use(express.urlencoded({ limit: '10mb', extended: true })); // limit for URL
 
 /* SECURITY - Middleware */
 app.use(clerkMiddleware());
-app.use(globalIpLimiter); // Limits requests per IP
-app.use(clerkAwareLimiter); // Limits requests per Clerk user
+// app.use(globalIpLimiter); // Limits requests per IP
+// app.use(clerkAwareLimiter); // Limits requests per Clerk user
 app.use(noCache); // Prevents caching of sensitive / private responses
-app.use(errorHandler);
 
-/* SECURITY - Dev Only Tools */
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(generateOpenAPI()));
 }
+
+// Routes
+app.use('/api/users', usersRouter);
+app.use('/api/messages', messagesRouter);
+app.use('/api/conversations', conversationsRouter);
+app.use('/api/upload', uploadRouter);
+// app.use('/api/documents', documentsRouter);
+
+app.use(errorHandler);
 
 /* Start Server */
 app.get('/health', (req, res) => {

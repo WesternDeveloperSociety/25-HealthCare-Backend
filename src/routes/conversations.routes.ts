@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import {
   addMemberToConversation,
-  createConverstation,
+  createConversation,
   getConversations,
   leaveConverstation,
   removeMemberFromConversation,
@@ -33,7 +33,7 @@ router.get(
   subscribeToConversation
 ); // via SSE (sever sent events)
 
-router.post('/', validate(CreateConversationSchema.shape), createConverstation);
+router.post('/', validate(CreateConversationSchema.shape), createConversation);
 
 // Membership Relating Routes
 router.post(

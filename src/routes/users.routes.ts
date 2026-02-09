@@ -4,6 +4,7 @@ import {
   createUser,
   getCurrentUser,
   getUserById,
+  getUsers,
   updateCurrentUser,
 } from '@/controllers/users.controller';
 import { requireAuthentication } from '@/middleware/auth';
@@ -21,6 +22,9 @@ router.post('/', validate(CreateUserSchema.shape), createUser);
 
 // Protected routes - require authentication
 router.use(requireAuthentication);
+
+// List all users (for chat selection)
+router.get('/', getUsers);
 
 // Get current authenticated user
 router.get('/me', getCurrentUser);

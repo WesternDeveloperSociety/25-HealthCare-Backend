@@ -104,6 +104,36 @@ export const GetUserByIdSchema = z.object({
  * Register OpenAPI paths - using inline schema definitions
  */
 
+// Response schema for GET /users (list users for chat selection)
+export const UserListItemSchema = z.object({
+  id: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  email: z.string().email(),
+  role: UserRoleEnum,
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/users',
+  description: 'List all users for chat selection',
+  summary: 'List users',
+  tags: ['Users'],
+  responses: {
+    200: {
+      description: 'List of users',
+      content: {
+        'application/json': {
+          schema: z.array(UserListItemSchema.openapi('UserListItem')),
+        },
+      },
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+  },
+});
+
 registry.registerPath({
   method: 'post',
   path: '/users',

@@ -42,6 +42,34 @@ export const getUserById = async (req: Request, res: Response) => {
 };
 
 /**
+ * GET /api/users
+ * List all users (for chat user selection)
+ */
+export const getUsers = async (req: Request, res: Response) => {
+  const { userId } = getAuth(req);
+  if (!userId) throw AppError.Unauthorized('Unauthorized');
+
+  // Return all users except the current user
+  const users = await prisma.user.findMany({
+    where: {
+      id: { not: userId },
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+    },
+    orderBy: {
+      firstName: 'asc',
+    },
+  });
+
+  res.json(users);
+};
+
+/**
  * POST /api/users
  * Create or sync user from Clerk
  * ! Needs way more validation like checking if license number is legit
@@ -85,18 +113,18 @@ export const createUser = async (req: Request, res: Response) => {
       throw AppError.BadRequest('Last name does not match with registration');
     }
 
-    // Phone number (ANY verified phone)
-    const phoneMatches = clerkUser.phoneNumbers?.some(
-      (p) =>
-        p.verification?.status === 'verified' &&
-        normalizePhone(p.phoneNumber) === normalizePhone(phoneNumber)
-    );
+    // Phone number verification disabled - signup flow doesn't collect phone numbers
+    // const phoneMatches = clerkUser.phoneNumbers?.some(
+    //   (p) =>
+    //     p.verification?.status === 'verified' &&
+    //     normalizePhone(p.phoneNumber) === normalizePhone(phoneNumber)
+    // );
 
-    if (!phoneMatches) {
-      throw AppError.VerificationFailed(
-        'Phone number does not match with verified phone numbers. Please verify your phone number.'
-      );
-    }
+    // if (!phoneMatches) {
+    //   throw AppError.VerificationFailed(
+    //     'Phone number does not match with verified phone numbers. Please verify your phone number.'
+    //   );
+    // }
 
     // Email (ANY verified email)
     const emailMatches = clerkUser.emailAddresses?.some(

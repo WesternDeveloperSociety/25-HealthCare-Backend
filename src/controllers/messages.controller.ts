@@ -51,7 +51,7 @@ export const getMessages = async (req: Request, res: Response) => {
 
     const attachements = await Promise.all(
       messages.map((message) => {
-        message.attachments.map((attachment) => {});
+        message.attachments.map((attachment) => { });
       })
     );
 
@@ -88,28 +88,61 @@ export const getMessages = async (req: Request, res: Response) => {
  * POST /api/messages/:conversationId
  */
 export const postMessages = async (req: Request, res: Response) => {
-  // const { conversationId } = req.params;
-  // const auth = getAuth(req);
+  const { conversationId } = req.params;
+  const auth = getAuth(req);
 
-  // if (!auth.userId) {
-  //   throw AppError.Unauthorized('User not authenticated');
-  // }
+  if (!auth.userId) {
+    throw AppError.Unauthorized('User not authenticated');
+  }
 
-  // const conversation = await prisma.conversation.findUnique({
-  //   where: { id: conversationId },
-  // });
+  if (!conversationId) {
+    throw AppError.BadRequest('Conversation ID is required');
+  }
 
-  // if (!conversation) {
-  //   throw AppError.NotFound('Conversation not found');
-  // }
+  // Verify conversation exists and user is a member
+  const membership = await prisma.conversationMember.findUnique({
+    where: {
+      conversationId_userId: {
+        conversationId: conversationId as string,
+        userId: auth.userId,
+      },
+    },
+  });
 
-  // const message = await prisma.message.create({
-  //   data: {
-  //     conversationId,
-  //     senderId: auth.userId,
-  //     content: req.body.content,
-  //   },
-  // });
+  if (!membership) {
+    throw AppError.Forbidden('You are not a member of this conversation');
+  }
 
-  // res.status(201).json(message);
+  // Accept both 'body' (schema) and 'content' (frontend compatibility)
+  const { body, content, attachments } = req.body as {
+    body?: string;
+    content?: string;
+    attachments?: string[]
+  };
+
+  const messageBody = body || content;
+
+  if (!messageBody || messageBody.trim() === '') {
+    throw AppError.BadRequest('Message body is required');
+  }
+
+  const message = await prisma.message.create({
+    data: {
+      conversationId: conversationId as string,
+      senderId: auth.userId,
+      body: messageBody,
+      attachments: attachments || [],
+    },
+    include: {
+      sender: {
+        select: {
+          firstName: true,
+          lastName: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  res.status(201).json(message);
 };

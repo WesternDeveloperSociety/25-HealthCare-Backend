@@ -63,9 +63,44 @@ export const subscribeToConversation = async (
 };
 
 /**
- * POST /api/conversations/:conversationId
+ * POST /api/conversations
+ * Create a new conversation with members
  */
-export const createConverstation = async (req: Request, res: Response) => { };
+export const createConversation = async (req: Request, res: Response) => {
+  const { userId } = getAuth(req);
+  if (!userId) throw AppError.Unauthorized('Unauthorized');
+
+  const { title, userIds } = req.body as { title?: string; userIds: string[] };
+
+  if (!userIds || userIds.length === 0) {
+    throw AppError.BadRequest('At least one member is required');
+  }
+
+  // Include the current user in the conversation
+  const allMemberIds = [...new Set([userId, ...userIds])];
+
+  const conversation = await prisma.conversation.create({
+    data: {
+      title: title || null,
+      isGroup: allMemberIds.length > 2,
+      members: {
+        create: allMemberIds.map((id, index) => ({
+          userId: id,
+          role: index === 0 ? 'ADMIN' : 'MEMBER', // First member (creator) is admin
+        })),
+      },
+    },
+    include: {
+      members: {
+        include: {
+          user: true,
+        },
+      },
+    },
+  });
+
+  res.status(201).json(conversation);
+};
 
 /**
  * POST /api/conversations/members/:conversationId/members

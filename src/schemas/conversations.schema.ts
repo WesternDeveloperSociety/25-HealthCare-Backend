@@ -69,6 +69,32 @@ export const LeaveConversationSchema = strictObject({
 });
 
 /**
+ * Response schemas for OpenAPI
+ */
+const ConversationListItemSchema = z.object({
+  id: z.string(),
+  title: z.string().nullable(),
+  isGroup: z.boolean(),
+  createdAt: z.string(),
+});
+
+const ConversationDetailSchema = z.object({
+  id: z.string(),
+  title: z.string().nullable(),
+  isGroup: z.boolean(),
+  createdAt: z.string(),
+  members: z.array(z.object({
+    id: z.string(),
+    userId: z.string(),
+    role: z.string(),
+    user: z.object({
+      firstName: z.string(),
+      lastName: z.string(),
+    }).optional(),
+  })),
+});
+
+/**
  * Register OpenAPI paths - using inline schema definitions
  */
 
@@ -87,6 +113,11 @@ registry.registerPath({
   responses: {
     200: {
       description: 'List of conversations',
+      content: {
+        'application/json': {
+          schema: z.array(ConversationListItemSchema.openapi('ConversationListItem')),
+        },
+      },
     },
   },
 });
@@ -135,6 +166,11 @@ registry.registerPath({
   responses: {
     201: {
       description: 'Conversation created',
+      content: {
+        'application/json': {
+          schema: ConversationDetailSchema.openapi('ConversationDetail'),
+        },
+      },
     },
   },
 });

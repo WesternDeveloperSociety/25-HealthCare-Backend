@@ -31,7 +31,7 @@ export const SubscribeToConversationSchema = strictObject({
 
 export const CreateConversationSchema = strictObject({
   body: strictObject({
-    userIds: z.array(z.uuid()).min(1).max(50),
+    userIds: z.array(z.string().min(1)).min(1).max(50),
     title: z.string().min(1).max(100).optional(),
   }),
 });
@@ -50,7 +50,7 @@ export const AddMemberSchema = strictObject({
     conversationId: z.uuid(),
   }),
   body: strictObject({
-    userId: z.uuid(),
+    userId: z.string().min(1),
     role: z.enum(['MEMBER', 'ADMIN']).optional().default('MEMBER'),
   }),
 });
@@ -58,7 +58,7 @@ export const AddMemberSchema = strictObject({
 export const RemoveMemberSchema = strictObject({
   params: strictObject({
     conversationId: z.uuid(),
-    userId: z.uuid(),
+    userId: z.string().min(1),
   }),
 });
 
@@ -155,7 +155,7 @@ registry.registerPath({
         'application/json': {
           schema: z
             .object({
-              userIds: z.array(z.uuid()).min(1).max(50),
+              userIds: z.array(z.string().min(1)).min(1).max(50),
               title: z.string().min(1).max(100).optional(),
             })
             .openapi('CreateConversationBody'),
@@ -237,7 +237,7 @@ registry.registerPath({
         'application/json': {
           schema: z
             .object({
-              userId: z.uuid(),
+              userId: z.string().min(1),
               role: z.enum(['MEMBER', 'ADMIN']).optional().default('MEMBER'),
             })
             .openapi('AddMemberBody'),
@@ -261,7 +261,7 @@ registry.registerPath({
   request: {
     params: z.object({
       conversationId: z.uuid(),
-      userId: z.uuid(),
+      userId: z.string().min(1),
     }),
   },
   responses: {

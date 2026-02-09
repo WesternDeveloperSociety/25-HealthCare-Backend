@@ -1,5 +1,4 @@
 import { getAuth } from '@clerk/express';
-import { UserRole } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { AppError } from '@/utils/AppError';
 
@@ -33,7 +32,14 @@ export const getConversations = async (req: Request, res: Response) => {
     include: {
       members: {
         include: {
-          user: true,
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+            },
+          },
         },
       },
       messages: {
@@ -44,7 +50,7 @@ export const getConversations = async (req: Request, res: Response) => {
       },
     },
     orderBy: {
-      createdAt: 'desc', // or last message time
+      createdAt: 'desc',
     },
   });
 
@@ -64,7 +70,9 @@ export const subscribeToConversation = async (
 
 /**
  * POST /api/conversations
- * Create a new conversation with members
+ * Create a new conversation with members.
+ * For 1:1 conversations (exactly 2 members), returns the existing
+ * conversation if one already exists between the two users.
  */
 export const createConversation = async (req: Request, res: Response) => {
   const { userId } = getAuth(req);
@@ -78,11 +86,52 @@ export const createConversation = async (req: Request, res: Response) => {
 
   // Include the current user in the conversation
   const allMemberIds = [...new Set([userId, ...userIds])];
+  const isGroup = allMemberIds.length > 2;
+
+  // For 1:1 conversations, check if one already exists between these two users
+  if (!isGroup && allMemberIds.length === 2) {
+    const existingConversation = await prisma.conversation.findFirst({
+      where: {
+        isGroup: false,
+        AND: allMemberIds.map((id) => ({
+          members: {
+            some: { userId: id },
+          },
+        })),
+        // Ensure it has exactly 2 members (not a group that happens to include both)
+        members: {
+          every: {
+            userId: { in: allMemberIds },
+          },
+        },
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (existingConversation) {
+      // Return the existing conversation instead of creating a duplicate
+      res.status(200).json(existingConversation);
+      return;
+    }
+  }
 
   const conversation = await prisma.conversation.create({
     data: {
       title: title || null,
-      isGroup: allMemberIds.length > 2,
+      isGroup,
       members: {
         create: allMemberIds.map((id, index) => ({
           userId: id,
@@ -93,7 +142,14 @@ export const createConversation = async (req: Request, res: Response) => {
     include: {
       members: {
         include: {
-          user: true,
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+            },
+          },
         },
       },
     },

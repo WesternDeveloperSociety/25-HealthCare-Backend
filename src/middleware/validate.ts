@@ -15,10 +15,12 @@ export const validate =
         req.body = await validators.body.parseAsync(req.body);
       }
       if (validators.query) {
-        req.query = (await validators.query.parseAsync(req.query)) as any;
+        // Express 5: req.query is a read-only getter, so validate without reassigning
+        await validators.query.parseAsync(req.query);
       }
       if (validators.params) {
-        req.params = (await validators.params.parseAsync(req.params)) as any;
+        // Express 5: req.params may also be read-only in some cases
+        await validators.params.parseAsync(req.params);
       }
       next();
     } catch (error) {

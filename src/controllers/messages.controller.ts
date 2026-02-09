@@ -1,5 +1,4 @@
 import { getAuth } from '@clerk/express';
-import { UserRole } from '@prisma/client';
 import type { Request, Response } from 'express';
 
 import prisma from '@/lib/prisma';
@@ -16,72 +15,77 @@ ROUTES
  */
 export const getMessages = async (req: Request, res: Response) => {
   const { conversationId } = req.params as { conversationId: string };
-  // Validated by Zod
   const limit = req.query.limit ? Number(req.query.limit) : 30;
   const before = req.query.before ? Number(req.query.before) : undefined;
   const auth = getAuth(req);
 
-  // Fetching Messages
-  await prisma.$transaction(async (tx) => {
-    const conversation = await tx.conversation.findUnique({
-      where: { id: conversationId },
-    });
+  if (!auth.userId) {
+    throw AppError.Unauthorized('User not authenticated');
+  }
 
-    if (!conversation) {
-      throw AppError.NotFound('Conversation not found');
-    }
+  // Verify the user is a member of this conversation
+  const membership = await prisma.conversationMember.findUnique({
+    where: {
+      conversationId_userId: {
+        conversationId,
+        userId: auth.userId,
+      },
+    },
+  });
 
-    const messages = await tx.message.findMany({
+  if (!membership) {
+    throw AppError.Forbidden('You are not a member of this conversation');
+  }
+
+  // Fetch messages
+  const messages = await prisma.message.findMany({
+    where: {
+      conversationId,
+      ...(before && { createdAt: { lt: new Date(before) } }),
+    },
+    include: {
+      sender: {
+        select: {
+          firstName: true,
+          lastName: true,
+          role: true,
+        },
+      },
+    },
+    take: limit,
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Send the response immediately
+  res.status(200).json(messages);
+
+  // Mark unread messages as read in the background (fire-and-forget)
+  // Find messages NOT sent by the current user that they haven't read yet
+  try {
+    const unreadMessages = await prisma.message.findMany({
       where: {
         conversationId,
-        ...(before && { createdAt: { lt: new Date(Number(before)) } }),
+        senderId: { not: auth.userId },
+        isRead: false,
       },
-      include: {
-        sender: {
-          select: {
-            firstName: true,
-            lastName: true,
-            role: true,
-          },
-        },
-      },
-      take: limit ? Number(limit) : 30,
-      orderBy: { createdAt: 'desc' },
+      select: { id: true },
     });
 
-    const attachements = await Promise.all(
-      messages.map((message) => {
-        message.attachments.map((attachment) => { });
-      })
-    );
-
-    // Sending Messages (Client Recieves Messages)
-    res.status(200).json(messages);
-
-    // Updating Read Receipts
-    if (auth.userId) {
-      const unreadMessages = await tx.message.findMany({
+    if (unreadMessages.length > 0) {
+      await prisma.message.updateMany({
         where: {
-          conversationId,
+          id: { in: unreadMessages.map((m) => m.id) },
+        },
+        data: {
           isRead: true,
-          readBy: {
-            none: {
-              id: auth.userId,
-            },
-          },
+          readAt: new Date(),
         },
       });
-
-      await Promise.all(
-        unreadMessages.map((message) =>
-          tx.message.update({
-            where: { id: message.id },
-            data: { readBy: { connect: { id: auth.userId } } },
-          })
-        )
-      );
     }
-  });
+  } catch (err) {
+    // Non-critical -- log but don't fail the request
+    console.error('Failed to update read receipts:', err);
+  }
 };
 
 /**
@@ -103,7 +107,7 @@ export const postMessages = async (req: Request, res: Response) => {
   const membership = await prisma.conversationMember.findUnique({
     where: {
       conversationId_userId: {
-        conversationId: conversationId as string,
+        conversationId,
         userId: auth.userId,
       },
     },
@@ -113,24 +117,21 @@ export const postMessages = async (req: Request, res: Response) => {
     throw AppError.Forbidden('You are not a member of this conversation');
   }
 
-  // Accept both 'body' (schema) and 'content' (frontend compatibility)
-  const { body, content, attachments } = req.body as {
-    body?: string;
-    content?: string;
-    attachments?: string[]
+  // Use the validated 'content' field from the Zod schema
+  const { content, attachments } = req.body as {
+    content: string;
+    attachments?: string[];
   };
 
-  const messageBody = body || content;
-
-  if (!messageBody || messageBody.trim() === '') {
-    throw AppError.BadRequest('Message body is required');
+  if (!content || content.trim() === '') {
+    throw AppError.BadRequest('Message content is required');
   }
 
   const message = await prisma.message.create({
     data: {
-      conversationId: conversationId as string,
+      conversationId,
       senderId: auth.userId,
-      body: messageBody,
+      body: content,
       attachments: attachments || [],
     },
     include: {

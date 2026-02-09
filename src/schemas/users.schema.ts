@@ -96,7 +96,7 @@ export const UpdateUserSchema = z.object({
 
 export const GetUserByIdSchema = z.object({
   params: z.object({
-    id: z.uuid(),
+    id: z.string().min(1),
   }),
 });
 
@@ -205,7 +205,7 @@ registry.registerPath({
   tags: ['Users'],
   request: {
     params: z.object({
-      id: z.uuid(),
+      id: z.string().min(1),
     }),
   },
   responses: {
